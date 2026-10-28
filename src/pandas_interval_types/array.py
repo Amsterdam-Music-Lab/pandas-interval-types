@@ -9,7 +9,7 @@ from pandas.core import arraylike, roperator
 from pandas.core.dtypes.base import _registry
 from pandas.core.dtypes.cast import find_common_type
 
-from pandas_intervals.interval import Interval
+from pandas_interval_types.interval import Interval
 
 
 def _canonical_subtype(subtype) -> ExtensionDtype:

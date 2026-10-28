@@ -359,7 +359,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pandas-intervals"
+name = "pandas-interval-types"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [

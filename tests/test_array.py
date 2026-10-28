@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from pandas_fractions import FractionArray, FractionDType
 
-from pandas_intervals import Interval, IntervalArray, IntervalDType
+from pandas_interval_types import Interval, IntervalArray, IntervalDType
 
 
 def frac(values):

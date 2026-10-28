@@ -14,7 +14,7 @@ import pytest
 from pandas.tests.extension import base
 from pandas_fractions import FractionDType
 
-from pandas_intervals import Interval, IntervalArray, IntervalDType
+from pandas_interval_types import Interval, IntervalArray, IntervalDType
 
 
 def iv(left, right):

@@ -3,7 +3,7 @@ from fractions import Fraction as F
 
 import pytest
 
-from pandas_intervals import Interval
+from pandas_interval_types import Interval
 
 # the same interval [1/2, 3/2) with different time types, where representable
 TIME_TYPES = [

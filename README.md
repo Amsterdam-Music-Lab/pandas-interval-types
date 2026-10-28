@@ -1,10 +1,15 @@
-# pandas_intervals
+# pandas-interval-types
+
+**Note**: This is experimental and almost entirely AI generated.
+Use with caution but feel free to report bugs or suggest improvements.
+
+---
 
 Left-closed intervals `[left, right)` over arbitrary time types, such as `int`, `float`, or `Fraction`.
 
 ```python
 from fractions import Fraction
-from pandas_intervals import Interval
+from pandas_interval_types import Interval
 
 iv = Interval(Fraction(1, 2), Fraction(3, 2))
 iv.duration         # Fraction(1, 1)
@@ -24,7 +29,7 @@ and a pandas extension array of intervals, `IntervalArray`, with the dtype `span
 ```python
 import pandas as pd
 import pandas_fractions
-from pandas_intervals import IntervalArray
+from pandas_interval_types import IntervalArray
 
 onsets = pd.array([0, Fraction(1, 2)], dtype="frac")
 spans = pd.Series(IntervalArray.from_arrays(onsets, onsets + Fraction(1, 2)))
