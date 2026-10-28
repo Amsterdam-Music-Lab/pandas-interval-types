@@ -443,6 +443,26 @@ class IntervalArray(arraylike.OpsMixin, ExtensionArray):
         ranks[~na] = valid_ranks
         return ranks
 
+    # reductions
+    # ----------
+
+    def _reduce(self, name: str, *, skipna=True, keepdims=False, **kwargs):
+        if name not in ("min", "max"):
+            # raises a TypeError
+            return super()._reduce(name, skipna=skipna, keepdims=keepdims, **kwargs)
+        # the earliest or latest interval, in the same order as for sorting
+        na = self.isna()
+        if na.all() or (na.any() and not skipna):
+            index = -1  # NA with allow_fill
+        else:
+            ranks = self._values_for_argsort()  # NA has the highest rank
+            if name == "min":
+                index = int(np.argmin(ranks))
+            else:
+                index = int(np.argmax(np.where(na, -1, ranks)))
+        result = self.take([index], allow_fill=True)
+        return result if keepdims else result[0]
+
     # comparison
     # ----------
 

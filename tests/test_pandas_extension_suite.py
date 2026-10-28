@@ -63,6 +63,9 @@ def na_cmp():
 
 
 class TestIntervalArray(base.ExtensionTests):
+    def _supports_reduction(self, ser, op_name):
+        return op_name in ("count", "min", "max")
+
     # unsupported by design
 
     @pytest.mark.xfail(reason="pandas reads intervals from JSON as dicts")

@@ -225,3 +225,17 @@ def test_map_time():
     assert as_float.dtype == IntervalDType("Float64")
     with pytest.raises(ValueError):
         arr.map_time(lambda x: -x)
+
+
+def test_min_max():
+    ivs = [Interval(F(1), F(2)), None, Interval(F(0), F(3)), Interval(F(0), F(1))]
+    ser = pd.Series(pd.array(ivs, dtype="span"))
+    # by left end, then by right end, like sorting
+    assert ser.min() == Interval(0, 1)
+    assert ser.max() == Interval(1, 2)
+    assert pd.isna(ser.min(skipna=False))
+    assert pd.isna(pd.Series(pd.array([None], dtype="span[frac]")).max())
+    groups = ser.groupby([1, 1, 1, 2])
+    assert groups.min().tolist() == [Interval(0, 3), Interval(0, 1)]
+    with pytest.raises(TypeError):
+        ser.sum()

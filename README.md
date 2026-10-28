@@ -163,6 +163,10 @@ The array implements the `ExtensionArray` interface,
 which makes indexing, assignment, missing values, concatenation,
 sorting, grouping, factorizing, and comparisons work in pandas.
 Comparisons and sorting use the lexicographic order on `(left, right)`, like `Interval`.
+The reductions `min` and `max` (also in groupby) use the same order,
+so `ser.min()` is the earliest interval, and the shortest among those starting first.
+Other reductions like `sum` or `mean` aren't meaningful for intervals and raise a `TypeError`
+(for durations, use e.g. `arr.duration.sum()`).
 
 Like `Interval`, the array has `duration`, `map_time`, and arithmetic:
 
@@ -189,6 +193,3 @@ It passes pandas' extension test suite, except for two cases that are unsupporte
   Use `pd.Series` or `pd.array` with the dtype instead.
 - A JSON round trip doesn't restore intervals: they are written as objects like
   `{"left": "1/2", "right": "1"}` but read back as dicts.
-
-Not implemented yet: reductions like `min` and `max`,
-and vectorized relations between intervals.
