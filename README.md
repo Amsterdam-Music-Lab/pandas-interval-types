@@ -99,7 +99,8 @@ so that they work for scalar intervals and arrays alike.
     `t - iv` (it would mirror the interval),
     operations between two intervals (see above;
     since the time type is duck-typed, the operators explicitly reject `Interval` operands,
-    otherwise `iv1 + iv2` would produce an interval with intervals as its ends),
+    otherwise `iv1 + iv2` would produce an interval with intervals as its ends;
+    the same goes for collections like arrays, so that `iv + array` is left to the array),
     and `//` and `%` (rounding both ends independently isn't a meaningful interval operation;
     use `iv.map_time(math.floor)` if needed).
 
@@ -139,6 +140,8 @@ If pandas only infers `object`, as for `Fraction`s,
 the registered extension dtypes for the type of the ends are tried (e.g. `frac` for `Fraction`).
 These use the strict `_from_scalars`, so `Fraction`s and floats aren't silently mixed,
 but `int`s and `Fraction`s are (and give `frac`).
+Ends given as object arrays are inferred the same way,
+e.g. `from_arrays` with two object Series of `Fraction`s gives `span[frac]`.
 
 Arrays with different subtypes combine if their subtypes do,
 e.g. concatenating `span[frac]` and `span[Int64]` gives `span[frac]`.
@@ -146,10 +149,28 @@ e.g. concatenating `span[frac]` and `span[Int64]` gives `span[frac]`.
 
 ### What is supported
 
-So far, the array is basic: it implements the `ExtensionArray` interface,
+The array implements the `ExtensionArray` interface,
 which makes indexing, assignment, missing values, concatenation,
 sorting, grouping, factorizing, and comparisons work in pandas.
 Comparisons and sorting use the lexicographic order on `(left, right)`, like `Interval`.
+
+Like `Interval`, the array has `duration`, `map_time`, and arithmetic:
+
+- `arr.map_time(f)` applies `f` to the arrays of the ends (e.g. two `FractionArray`s),
+  so `f` works on arrays: `arr.map_time(lambda x: x.astype("Float64"))`.
+  As for `Interval`, `f` must be non-decreasing, otherwise it raises a `ValueError`.
+- `arr + t`, `t + arr`, and `arr - t` shift, `arr * s` and `s * arr` scale the intervals.
+  The operand is a time value or an array of time values of the same length (elementwise).
+  A missing operand gives a missing interval.
+  The same operations as for `Interval` are left out (division, `t - arr`, `//`, `%`, `**`),
+  and intervals as operands raise a `TypeError`.
+- The subtype of the result is the type of the ends' arithmetic,
+  e.g. `span[Int64] + Fraction(1, 2)` gives `span[frac]`,
+  and `span[frac] * 0.5` gives `span[Float64]`.
+  To get this, scalar operands are first converted to arrays (like the ends are inferred),
+  because pandas' `Int64` array would compute `Int64 + Fraction` on its int64 data,
+  which gives objects, but defers `Int64 + FractionArray` to `FractionArray`.
+
 It passes pandas' extension test suite, except for two cases that are unsupported by design:
 
 - `pd.DataFrame([interval, ...])` turns each interval into a row with the columns
@@ -158,5 +179,5 @@ It passes pandas' extension test suite, except for two cases that are unsupporte
 - A JSON round trip doesn't restore intervals: they are written as objects like
   `{"left": "1/2", "right": "1"}` but read back as dicts.
 
-Not implemented yet: arithmetic (shifting and scaling), `map_time` on arrays,
-reductions like `min` and `max`, and vectorized relations between intervals.
+Not implemented yet: reductions like `min` and `max`,
+and vectorized relations between intervals.

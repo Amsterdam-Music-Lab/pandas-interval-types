@@ -120,3 +120,81 @@ def test_sort_and_group():
     assert pd.isna(ser.sort_values().iloc[3])
     counts = pd.Series(pd.array(ivs[:2] * 2, dtype="span")).value_counts()
     assert counts.to_dict() == {ivs[0]: 2, ivs[1]: 2}
+
+
+def spans(*ivs):
+    return pd.array(list(ivs), dtype="span")
+
+
+def test_shift():
+    arr = spans(Interval(F(0), F(1)), None, Interval(F(1), F(3)))
+    shifted = spans(Interval(F(1, 2), F(3, 2)), None, Interval(F(3, 2), F(7, 2)))
+    assert list((arr + F(1, 2)).isna()) == [False, True, False]
+    assert (arr + F(1, 2) == shifted).sum() == 2
+    assert (F(1, 2) + arr == shifted).sum() == 2
+    assert ((arr + F(1, 2)) - F(1, 2) == arr).sum() == 2
+    assert ((arr + 1).duration == arr.duration).sum() == 2
+
+
+def test_scale():
+    arr = spans(Interval(F(1), F(3)), None)
+    assert (arr * 2)[0] == Interval(2, 6)
+    assert (2 * arr)[0] == Interval(2, 6)
+    assert (arr * 0)[0] == Interval(0, 0)
+    assert pd.isna((arr * 2)[1])
+    with pytest.raises(ValueError):
+        arr * -1
+
+
+def test_elementwise():
+    arr = spans(Interval(F(0), F(1)), Interval(F(0), F(1)), Interval(F(0), F(1)))
+    result = arr + frac([0, F(1, 2), None])
+    assert result[0] == Interval(0, 1)
+    assert result[1] == Interval(F(1, 2), F(3, 2))
+    assert pd.isna(result[2])
+    # a list operand is inferred like the ends
+    assert (arr * [1, F(1, 2), 2]).dtype == IntervalDType(FractionDType())
+
+
+def test_arith_subtype():
+    # Int64 and Fraction give fractions, fractions and floats give floats
+    assert (spans(Interval(0, 1)) + F(1, 2)).dtype == IntervalDType(FractionDType())
+    assert (spans(Interval(0, 1)) + F(1, 2))[0] == Interval(F(1, 2), F(3, 2))
+    as_float = spans(Interval(F(0), F(1, 2))) * 0.5
+    assert as_float.dtype == IntervalDType("Float64")
+    assert as_float[0] == Interval(0, 0.25)
+    # Series keep the span dtype
+    ser = pd.Series(spans(Interval(F(0), F(1))))
+    assert (ser + 1).dtype == ser.dtype
+    assert (ser + 1)[0] == Interval(1, 2)
+
+
+@pytest.mark.parametrize(
+    "operation",
+    [
+        lambda a: 1 - a,  # would mirror the intervals
+        lambda a: a / 2,
+        lambda a: a // 1,
+        lambda a: a % 1,
+        lambda a: a**2,
+        lambda a: a + a,
+        lambda a: a + Interval(0, 1),
+        lambda a: Interval(0, 1) + a,
+        lambda a: a + [Interval(0, 1)],
+        lambda a: pd.Series(a) * pd.Series(a),
+    ],
+)
+def test_arith_unsupported(operation):
+    with pytest.raises(TypeError):
+        operation(spans(Interval(F(0), F(1))))
+
+
+def test_map_time():
+    arr = spans(Interval(F(1, 2), F(3, 2)), None)
+    squared = arr.map_time(lambda x: x * x)
+    assert squared[0] == Interval(F(1, 4), F(9, 4))
+    assert pd.isna(squared[1])
+    as_float = arr.map_time(lambda x: x.astype("Float64"))
+    assert as_float.dtype == IntervalDType("Float64")
+    with pytest.raises(ValueError):
+        arr.map_time(lambda x: -x)

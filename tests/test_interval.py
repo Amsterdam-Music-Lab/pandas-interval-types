@@ -106,7 +106,7 @@ def test_mixed_types():
     assert type((Interval(F(0), F(1, 2)) * 0.5).right) is float
 
 
-def test_no_interval_operations():
+def test_no_interval_or_collection_operands():
     # operations between intervals are separate functions
     with pytest.raises(TypeError):
         Interval(0, 1) + Interval(1, 2)
@@ -116,3 +116,6 @@ def test_no_interval_operations():
         Interval(0, 1) - Interval(1, 2)
     with pytest.raises(TypeError):
         1 - Interval(1, 2)
+    # collections (e.g. arrays) are not time values
+    with pytest.raises(TypeError):
+        Interval(0, 1) + [1]

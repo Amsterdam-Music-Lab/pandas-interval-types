@@ -52,25 +52,24 @@ class Interval[T: Time]:
         return Interval(f(self.left), f(self.right))
 
     # Arithmetic with scalars.
-    # Interval operands are rejected explicitly, since T is duck-typed:
-    # otherwise iv1 + iv2 would compute iv1.left + iv2 = Interval(...) via __radd__.
+    # Other operands are rejected explicitly (see _is_time_value), since T is duck-typed.
     # For the same reason, mypy reports the reflected methods as unsafely overlapping
     # (Interval itself would fit the Time protocol), which these checks rule out.
 
     # shifting by a time value
 
     def __add__(self, t: T) -> "Interval[T]":
-        if isinstance(t, Interval):
+        if not _is_time_value(t):
             return NotImplemented
         return self.map_time(lambda x: x + t)
 
     def __radd__(self, t: T) -> "Interval[T]":  # type: ignore[misc]
-        if isinstance(t, Interval):
+        if not _is_time_value(t):
             return NotImplemented
         return self.map_time(lambda x: t + x)
 
     def __sub__(self, t: T) -> "Interval[T]":
-        if isinstance(t, Interval):
+        if not _is_time_value(t):
             return NotImplemented
         return self.map_time(lambda x: x - t)
 
@@ -78,11 +77,22 @@ class Interval[T: Time]:
     # (no division: multiply by the reciprocal instead, e.g. iv * Fraction(1, 2))
 
     def __mul__(self, factor: T) -> "Interval[T]":
-        if isinstance(factor, Interval):
+        if not _is_time_value(factor):
             return NotImplemented
         return self.map_time(lambda x: x * factor)
 
     def __rmul__(self, factor: T) -> "Interval[T]":  # type: ignore[misc]
-        if isinstance(factor, Interval):
+        if not _is_time_value(factor):
             return NotImplemented
         return self.map_time(lambda x: factor * x)
+
+
+def _is_time_value(t) -> bool:
+    """
+    Check if t can be an operand of interval arithmetic.
+
+    Intervals and collections (e.g. arrays) are not time values, because otherwise
+    iv + other would compute iv.left + other, giving an interval with intervals or
+    arrays as ends. Rejecting them lets e.g. an IntervalArray handle iv + array.
+    """
+    return not isinstance(t, Interval) and not hasattr(t, "__len__")

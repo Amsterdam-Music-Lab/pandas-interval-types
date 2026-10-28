@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from pandas._typing import type_t
 from pandas.api.extensions import ExtensionArray, ExtensionDtype, no_default
-from pandas.core import arraylike
+from pandas.core import arraylike, roperator
 from pandas.core.dtypes.base import _registry
 from pandas.core.dtypes.cast import find_common_type
 
@@ -89,9 +89,9 @@ def _infer_ends(values: list) -> ExtensionArray:
     extension dtypes for the type of the values, e.g. frac for Fraction.
     """
     # pandas' inference handles builtin types, e.g. ints become Int64
-    array = _canonical_array(pd.array(values))
+    array = pd.array(values)
     if not pd.api.types.is_object_dtype(array.dtype):
-        return array
+        return _canonical_array(array)
     # object: look for registered dtypes whose scalar type occurs in the values
     types = {type(x) for x in values if x is not None}
     for dtype_class in _registry.dtypes:
@@ -121,8 +121,8 @@ def _canonical_array(values) -> ExtensionArray:
             return values
     if isinstance(values, np.ndarray):
         if values.dtype == np.dtype(object):
-            # an object array keeps its dtype, without inferring a more specific one
-            return pd.array(values, dtype=object)
+            # objects may have a more specific dtype, e.g. Fractions (as in a Series)
+            return _infer_ends(list(values))
         # e.g. int64 becomes Int64, which can hold NA
         return pd.array(values, dtype=_canonical_subtype(values.dtype))
     # other sequences (e.g. lists) have no dtype, so it is inferred
@@ -161,7 +161,7 @@ class IntervalArray(arraylike.OpsMixin, ExtensionArray):
             raise TypeError(f"{dtype} is not an interval dtype")
         subtype = dtype.subtype
         if subtype is None:
-            subtype = find_common_type([left.dtype, right.dtype])
+            subtype = _canonical_subtype(find_common_type([left.dtype, right.dtype]))
         left = left.astype(subtype, copy=False)
         right = right.astype(subtype, copy=False)
 
@@ -219,6 +219,57 @@ class IntervalArray(arraylike.OpsMixin, ExtensionArray):
     @property
     def duration(self) -> ExtensionArray:
         return self._right - self._left
+
+    def map_time(self, f) -> "IntervalArray":
+        """
+        Apply f to the arrays of left and right ends.
+
+        f takes and returns an array of time values (e.g. a FractionArray),
+        and must be non-decreasing elementwise, like for Interval.map_time.
+        Otherwise, the ends would be swapped, which raises a ValueError.
+        """
+        return type(self).from_arrays(f(self._left), f(self._right))
+
+    # arithmetic
+    # ----------
+    # Like Interval: shifting (+, -) and scaling (*) by time values,
+    # either scalars or arrays of the same length (elementwise).
+
+    _ARITH_OPS = (
+        operator.add,
+        roperator.radd,
+        operator.sub,
+        operator.mul,
+        roperator.rmul,
+    )
+
+    def _arith_method(self, other, op):
+        if op not in self._ARITH_OPS:
+            return NotImplemented
+        if isinstance(other, Interval):
+            other = None
+        elif pd.api.types.is_scalar(other):
+            # Convert scalars to arrays, so that the arrays of the ends and the operand
+            # decide the result type between them. E.g. an Int64 array computes
+            # Int64 + Fraction on its int64 data, which gives objects,
+            # but defers Int64 + FractionArray to FractionArray, which gives fractions.
+            other = _infer_ends([other] * len(self))
+        elif not isinstance(other, IntervalArray):
+            # e.g. a list of Fractions becomes a FractionArray
+            other = _canonical_array(other)
+            # a list of intervals stays an object array
+            if pd.api.types.is_object_dtype(other.dtype) and any(
+                isinstance(x, Interval) for x in other
+            ):
+                other = None
+        if other is None or isinstance(other, IntervalArray):
+            # Raised instead of returning NotImplemented,
+            # so that Python doesn't fall back to Interval.__radd__ etc.
+            raise TypeError(
+                "intervals can't be operands of interval arithmetic, "
+                "use separate functions for operations between intervals"
+            )
+        return self.map_time(lambda ends: op(ends, other))
 
     # the ExtensionArray interface
     # ----------------------------
