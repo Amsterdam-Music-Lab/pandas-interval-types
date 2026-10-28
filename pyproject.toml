@@ -8,7 +8,10 @@ authors = [
 description = "Left-closed intervals over arbitrary time types (int, float, Fraction, ...)."
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "numpy>=2.5.3",
+    "pandas>=3.1.0",
+]
 
 [build-system]
 requires = ["uv_build>=0.12.10,<0.13.0"]
@@ -18,5 +21,14 @@ build-backend = "uv_build"
 dev = [
     "black>=26.10.1",
     "mypy>=2.4.0",
+    "pandas-fractions",
     "pytest>=9.1.1",
 ]
+
+[tool.uv.sources]
+pandas-fractions = { git = "https://github.com/Amsterdam-Music-Lab/pandas-fractions" }
+
+[[tool.mypy.overrides]]
+# pandas has no inline types, and the array module uses pandas internals
+module = ["pandas.*"]
+ignore_missing_imports = true

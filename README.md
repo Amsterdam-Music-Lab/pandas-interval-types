@@ -18,8 +18,21 @@ iv.map_time(float)  # Interval(left=0.5, right=1.5)
 pandas' own `Interval` doesn't support exact time types:
 `pd.Interval(Fraction(0), Fraction(1))` raises a `ValueError`
 ("Only numeric, Timestamp and Timedelta endpoints are allowed").
-So far, this package contains only the scalar `Interval` class;
-a vectorized pandas extension array may follow.
+This package provides the scalar `Interval` class
+and a pandas extension array of intervals, `IntervalArray`, with the dtype `span[<subtype>]`:
+
+```python
+import pandas as pd
+import pandas_fractions
+from pandas_intervals import IntervalArray
+
+onsets = pd.array([0, Fraction(1, 2)], dtype="frac")
+spans = pd.Series(IntervalArray.from_arrays(onsets, onsets + Fraction(1, 2)))
+spans.dtype           # span[frac]
+spans[1]              # Interval(left=Fraction(1, 2), right=Fraction(1, 1))
+spans.array.duration  # FractionArray [1/2, 1/2]
+pd.Series([Interval(0, Fraction(1, 2))], dtype="span")  # infers span[frac]
+```
 
 ## Design
 
@@ -97,3 +110,53 @@ and arithmetic follows Python's rules for mixing them.
 `int` and `Fraction` mix without losing exactness (`Interval(0, Fraction(1, 2)) + 1`),
 but `Fraction` and `float` silently give floats (`Interval(Fraction(0), Fraction(1, 2)) * 0.5`).
 `Interval` doesn't check this, so keep time types consistent where exactness matters.
+
+## The extension array
+
+### Storage
+
+An `IntervalArray` stores the ends of its intervals as two pandas extension arrays,
+`left` and `right`, of the same dtype, the subtype.
+For example, the ends of a `span[frac]` array are two `FractionArray`s.
+Like in the scalar class, the subtype can be anything with ordering and arithmetic,
+and all operations on intervals are written against the operations of the ends' arrays.
+
+The ends are always extension arrays, so that they can represent missing values.
+numpy subtypes are replaced by the extension dtypes pandas uses for them,
+e.g. `span[int64]` becomes `span[Int64]` and `span[float64]` becomes `span[Float64]`,
+and other numpy dtypes (like `object`) are wrapped.
+Otherwise, inserting a missing value would change the dtype of the ends (e.g. from int to float).
+An interval is missing if both of its ends are missing,
+and the ends must be missing at the same positions.
+
+### The dtype
+
+The dtype is called `span[<subtype>]`, e.g. `span[frac]` or `span[Int64]`,
+because pandas' own `IntervalDtype` claims every dtype string that contains `interval[`.
+Without a subtype, `span` infers the subtype from the data.
+Both ends are inferred together, so they always get the same subtype.
+If pandas only infers `object`, as for `Fraction`s,
+the registered extension dtypes for the type of the ends are tried (e.g. `frac` for `Fraction`).
+These use the strict `_from_scalars`, so `Fraction`s and floats aren't silently mixed,
+but `int`s and `Fraction`s are (and give `frac`).
+
+Arrays with different subtypes combine if their subtypes do,
+e.g. concatenating `span[frac]` and `span[Int64]` gives `span[frac]`.
+`astype("span[<subtype>]")` converts the ends, e.g. from `frac` to `Float64`.
+
+### What is supported
+
+So far, the array is basic: it implements the `ExtensionArray` interface,
+which makes indexing, assignment, missing values, concatenation,
+sorting, grouping, factorizing, and comparisons work in pandas.
+Comparisons and sorting use the lexicographic order on `(left, right)`, like `Interval`.
+It passes pandas' extension test suite, except for two cases that are unsupported by design:
+
+- `pd.DataFrame([interval, ...])` turns each interval into a row with the columns
+  `left` and `right`, because pandas treats lists of dataclasses as records.
+  Use `pd.Series` or `pd.array` with the dtype instead.
+- A JSON round trip doesn't restore intervals: they are written as objects like
+  `{"left": "1/2", "right": "1"}` but read back as dicts.
+
+Not implemented yet: arithmetic (shifting and scaling), `map_time` on arrays,
+reductions like `min` and `max`, and vectorized relations between intervals.
