@@ -44,7 +44,7 @@ def test_contains():
     assert 1 in iv
     assert F(3, 2) not in iv  # open on the right
     assert 0 not in iv
-    assert 0 not in Interval(0, 0)  # zero-length intervals contain nothing
+    assert 1 in Interval(1, 1)  # zero-length intervals contain exactly one point
 
 
 def test_equality_and_hash_across_types():

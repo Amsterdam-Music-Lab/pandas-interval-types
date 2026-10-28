@@ -21,6 +21,10 @@ class Interval[T: Time]:
     T can be any type with ordering and arithmetic, e.g. int, float, or Fraction.
     `left` is the onset and `right` the offset of the interval.
     Intervals are immutable, hashable, and sorted by (left, right).
+
+    In the special case that left == right,
+    the interval represents the closed interval [left, right],
+    containing exactly the time point left (== right).
     """
 
     left: T
@@ -39,7 +43,7 @@ class Interval[T: Time]:
         return self.right - self.left
 
     def __contains__(self, t: T) -> bool:
-        return self.left <= t < self.right
+        return t == self.left if self.left == self.right else self.left <= t < self.right
 
     def map_time[U: Time](self, f: Callable[[T], U]) -> "Interval[U]":
         """
