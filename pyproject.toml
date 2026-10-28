@@ -1,0 +1,22 @@
+[project]
+name = "pandas-intervals"
+version = "0.0.1"
+license = "GPL-3.0-or-later"
+authors = [
+  { name="Christoph Finkensiep", email="c.finkensiep@uva.nl" }
+]
+description = "Left-closed intervals over arbitrary time types (int, float, Fraction, ...)."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.12.10,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "black>=26.10.1",
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+]
