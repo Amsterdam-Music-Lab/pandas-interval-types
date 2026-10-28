@@ -1,3 +1,4 @@
+from decimal import Decimal
 from fractions import Fraction as F
 
 import numpy as np
@@ -34,7 +35,7 @@ def test_dtype_canonical_subtype():
         ([Interval(0, F(1, 2))], FractionDType()),  # int and Fraction stay exact
         ([Interval(0, 1)], pd.Int64Dtype()),
         ([Interval(0, 0.5)], pd.Float64Dtype()),
-        ([Interval(F(0), 0.5)], np.dtype(object)),  # no implicit float conversion
+        ([Interval(Decimal(0), Decimal(1))], np.dtype(object)),  # no own dtype
     ],
 )
 def test_infer_subtype(ivs, subtype):
@@ -54,6 +55,32 @@ def test_from_arrays():
     # the subtype can be given explicitly
     as_float = IntervalArray.from_arrays([0, 1], [1, 2], dtype="span[float64]")
     assert as_float.dtype == IntervalDType("Float64")
+
+
+@pytest.mark.parametrize(
+    "construct",
+    [
+        lambda: pd.array([Interval(F(0), 0.5)], dtype="span"),
+        lambda: pd.array([Interval(F(0), F(1)), Interval(0.5, 1.5)], dtype="span"),
+        lambda: IntervalArray.from_arrays(frac([0]), [0.5]),
+        lambda: pd.array([Interval(F(0), F(1))] * 2, dtype="span") + [F(1, 2), 0.5],
+    ],
+)
+def test_lossy_mix(construct):
+    # ends that only combine to object (Fraction and float) are rejected
+    with pytest.raises(TypeError, match="exactly"):
+        construct()
+
+
+def test_explicit_mix():
+    # exact promotions and explicit subtypes are allowed
+    assert pd.array([Interval(0, F(1, 2))], dtype="span").dtype == IntervalDType(
+        FractionDType()
+    )
+    as_object = pd.array([Interval(F(0), 0.5)], dtype="span[object]")
+    assert as_object[0] == Interval(F(0), 0.5)
+    as_float = IntervalArray.from_arrays(frac([0]), [0.5], dtype="span[Float64]")
+    assert as_float[0] == Interval(0, 0.5)
 
 
 def test_from_arrays_invalid():

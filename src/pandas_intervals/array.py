@@ -93,7 +93,8 @@ def _infer_ends(values: list) -> ExtensionArray:
     if not pd.api.types.is_object_dtype(array.dtype):
         return _canonical_array(array)
     # object: look for registered dtypes whose scalar type occurs in the values
-    types = {type(x) for x in values if x is not None}
+    valid = [x for x in values if not (pd.api.types.is_scalar(x) and pd.isna(x))]
+    types = {type(x) for x in valid}
     for dtype_class in _registry.dtypes:
         if getattr(dtype_class, "type", None) not in types:
             continue
@@ -104,8 +105,22 @@ def _infer_ends(values: list) -> ExtensionArray:
             return dtype.construct_array_type()._from_scalars(values, dtype=dtype)
         except TypeError, ValueError:
             continue
-    # no dtype accepts all values, so keep them as objects
+    # no dtype accepts all values, so keep them as objects,
+    # unless they are a lossy mix of types that have dtypes on their own
+    if len(types) > 1:
+        dtypes = [_infer_ends([x for x in valid if type(x) is t]).dtype for t in types]
+        if not any(pd.api.types.is_object_dtype(t) for t in dtypes):
+            _check_exact_mix(dtypes, [t.__name__ for t in types])
     return array
+
+
+def _check_exact_mix(dtypes, names) -> None:
+    """Raise a TypeError if the dtypes of interval ends only combine to object."""
+    if pd.api.types.is_object_dtype(find_common_type(dtypes)):
+        raise TypeError(
+            f"interval ends of types {' and '.join(sorted(names))} "
+            "can't be combined exactly, convert them explicitly (e.g. with astype)"
+        )
 
 
 def _canonical_array(values) -> ExtensionArray:
@@ -127,6 +142,15 @@ def _canonical_array(values) -> ExtensionArray:
         return pd.array(values, dtype=_canonical_subtype(values.dtype))
     # other sequences (e.g. lists) have no dtype, so it is inferred
     return _infer_ends(list(values))
+
+
+def _as_subtype(values, subtype) -> ExtensionArray:
+    """Convert array-like interval ends to the given (canonical) subtype."""
+    if isinstance(values, (pd.Series, pd.Index)):
+        values = values.array
+    if isinstance(values, ExtensionArray):
+        return values.astype(subtype, copy=False)
+    return pd.array(values, dtype=subtype)
 
 
 class IntervalArray(arraylike.OpsMixin, ExtensionArray):
@@ -153,17 +177,22 @@ class IntervalArray(arraylike.OpsMixin, ExtensionArray):
         Each interval must satisfy left <= right,
         and left must be missing exactly where right is missing.
         """
-        left, right = _canonical_array(left), _canonical_array(right)
-        if len(left) != len(right):
-            raise ValueError("left and right must have the same length")
         dtype = IntervalDType() if dtype is None else pd.api.types.pandas_dtype(dtype)
         if not isinstance(dtype, IntervalDType):
             raise TypeError(f"{dtype} is not an interval dtype")
         subtype = dtype.subtype
         if subtype is None:
+            # infer the ends' dtypes and combine them, if this is exact
+            left, right = _canonical_array(left), _canonical_array(right)
+            if left.dtype != right.dtype:
+                _check_exact_mix(
+                    [left.dtype, right.dtype], [str(left.dtype), str(right.dtype)]
+                )
             subtype = _canonical_subtype(find_common_type([left.dtype, right.dtype]))
-        left = left.astype(subtype, copy=False)
-        right = right.astype(subtype, copy=False)
+        # an explicit subtype is used without inference, e.g. object accepts any mix
+        left, right = _as_subtype(left, subtype), _as_subtype(right, subtype)
+        if len(left) != len(right):
+            raise ValueError("left and right must have the same length")
 
         na = left.isna()
         if np.any(na != right.isna()):

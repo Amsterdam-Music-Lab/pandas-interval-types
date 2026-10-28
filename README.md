@@ -138,10 +138,20 @@ Without a subtype, `span` infers the subtype from the data.
 Both ends are inferred together, so they always get the same subtype.
 If pandas only infers `object`, as for `Fraction`s,
 the registered extension dtypes for the type of the ends are tried (e.g. `frac` for `Fraction`).
-These use the strict `_from_scalars`, so `Fraction`s and floats aren't silently mixed,
-but `int`s and `Fraction`s are (and give `frac`).
 Ends given as object arrays are inferred the same way,
 e.g. `from_arrays` with two object Series of `Fraction`s gives `span[frac]`.
+Types without a dtype of their own (e.g. `Decimal`) give `span[object]`.
+
+Ends of different types are combined if this is exact,
+e.g. `int`s and `Fraction`s give `frac`, and `int`s and floats give `Float64`.
+Types that only combine to `object`, such as `Fraction`s and floats, raise a `TypeError`,
+whether they are mixed within an interval, across intervals, or between the two ends.
+Mixing them is usually a mistake (e.g. score time and seconds),
+and `span[object]` would be easy to miss.
+To combine them anyway, convert them explicitly (e.g. with `astype` or `map_time`),
+or ask for an explicit subtype like `span[Float64]` or `span[object]`,
+which is used without inference.
+(The scalar `Interval` follows Python's rules instead, see "Mixed time types".)
 
 Arrays with different subtypes combine if their subtypes do,
 e.g. concatenating `span[frac]` and `span[Int64]` gives `span[frac]`.
@@ -170,6 +180,7 @@ Like `Interval`, the array has `duration`, `map_time`, and arithmetic:
   To get this, scalar operands are first converted to arrays (like the ends are inferred),
   because pandas' `Int64` array would compute `Int64 + Fraction` on its int64 data,
   which gives objects, but defers `Int64 + FractionArray` to `FractionArray`.
+  An operand that mixes `Fraction`s and floats raises a `TypeError`, like mixed ends.
 
 It passes pandas' extension test suite, except for two cases that are unsupported by design:
 
