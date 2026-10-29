@@ -1,6 +1,6 @@
 # pandas-interval-types
 
-**Note**: This is experimental and almost entirely AI generated.
+**Note**: This is experimental and partly AI generated.
 Use with caution but feel free to report bugs or suggest improvements.
 
 ---
