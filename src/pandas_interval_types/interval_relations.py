@@ -55,7 +55,7 @@ def during_strict(a: IntervalLike, b: IntervalLike) -> Boolish:
 
 
 def finishes(a: IntervalLike, b: IntervalLike) -> Boolish:
-    return (a.left > b.left) & (a.right == b.right)
+    return (a.left > b.left) & (a.right == b.right) & (a.left < b.right)
 
 
 def is_finished(a: IntervalLike, b: IntervalLike) -> Boolish:
@@ -71,21 +71,32 @@ def equal(a: IntervalLike, b: IntervalLike) -> Boolish:
 
 
 def intersects(a: IntervalLike, b: IntervalLike) -> Boolish:
-    return (a.right > b.left) & (b.right > a.left)
+    a_closed = a.left == a.right
+    b_closed = b.left == b.right
+    a_after_b = (a.right > b.left) | (a_closed & (a.right >= b.left))
+    b_after_a = (b.right > a.left) | (b_closed & (b.right >= a.left))
+    return a_after_b & b_after_a
 
 
 def contains(a: IntervalLike, b: IntervalLike) -> Boolish:
-    """constains_strict or is_started or is_finished"""
-    return (a.left <= b.left) & (a.right >= b.right)
+    """constains_strict or is_started or is_finished or equal"""
+    b_open = b.left != b.right
+    a_closed = a.left == a.right
+    left_in = a.left <= b.left
+    right_in = (a.right > b.right) | ((b_open | a_closed) & (a.right >= b.right))
+    return left_in & right_in
 
 
 def during(a: IntervalLike, b: IntervalLike) -> Boolish:
-    """during_strict or starts or finishes"""
+    """during_strict or starts or finishes or equal"""
     return contains(b, a)
 
 
 def contains_start(a: IntervalLike, b: IntervalLike) -> Boolish:
-    return (a.left <= b.left) & (a.right > b.left)
+    a_closed = a.left == a.right
+    left = a.left <= b.left
+    right = (a.right > b.left) | (a_closed & (a.right >= b.left))
+    return left & right
 
 
 def starts_in(a: IntervalLike, b: IntervalLike) -> Boolish:
@@ -93,7 +104,13 @@ def starts_in(a: IntervalLike, b: IntervalLike) -> Boolish:
 
 
 def contains_end(a: IntervalLike, b: IntervalLike) -> Boolish:
-    return (a.left < b.right) & (a.right >= b.right)
+    a_closed = a.left == a.right
+    b_closed = b.left == b.right
+    a_open = a.left != a.right
+    b_open = b.left != b.right
+    left = (b_closed & (a.left <= b.right)) | (a.left < b.right)
+    right = ((a_closed | b_open) & (a.right >= b.right)) | (a.right > b.right)
+    return left & right
 
 
 def ends_in(a: IntervalLike, b: IntervalLike) -> Boolish:
@@ -105,7 +122,7 @@ def starts_with(a: IntervalLike, b: IntervalLike) -> Boolish:
 
 
 def ends_with(a: IntervalLike, b: IntervalLike) -> Boolish:
-    return a.right == b.right
+    return (a.right == b.right) & ((a.left == a.right) == (b.left == b.right))
 
 
 # Point-Interval Relations

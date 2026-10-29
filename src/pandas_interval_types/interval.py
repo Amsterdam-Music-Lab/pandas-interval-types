@@ -42,6 +42,9 @@ class Interval[T: Time]:
     def duration(self) -> T:
         return self.right - self.left
 
+    def __repr__(self):
+        return f"[{self.left}, {self.right}{']' if self.left == self.right else ')'}"
+
     def __contains__(self, t: T) -> bool:
         return t == self.left if self.left == self.right else self.left <= t < self.right
 
