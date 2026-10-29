@@ -46,7 +46,9 @@ class Interval[T: Time]:
         return f"[{self.left}, {self.right}{']' if self.left == self.right else ')'}"
 
     def __contains__(self, t: T) -> bool:
-        return t == self.left if self.left == self.right else self.left <= t < self.right
+        return (
+            t == self.left if self.left == self.right else self.left <= t < self.right
+        )
 
     def map_time[U: Time](self, f: Callable[[T], U]) -> "Interval[U]":
         """

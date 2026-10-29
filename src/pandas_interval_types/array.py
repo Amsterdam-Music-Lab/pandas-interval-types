@@ -204,6 +204,27 @@ class IntervalArray(arraylike.OpsMixin, ExtensionArray):
         return cls(left, right)
 
     @classmethod
+    def from_breaks(cls, breaks, dtype=None) -> "IntervalArray":
+        """
+        Create the intervals between consecutive break points.
+
+        n breaks give n - 1 intervals [breaks[i], breaks[i + 1]).
+        The breaks are converted like the ends in from_arrays,
+        must not be missing, and must be non-decreasing.
+        """
+        dtype = IntervalDType() if dtype is None else pd.api.types.pandas_dtype(dtype)
+        if not isinstance(dtype, IntervalDType):
+            raise TypeError(f"{dtype} is not an interval dtype")
+        # convert all breaks together, so that both ends get the same subtype
+        if dtype.subtype is None:
+            breaks = _canonical_array(breaks)
+        else:
+            breaks = _as_subtype(breaks, dtype.subtype)
+        if np.any(breaks.isna()):
+            raise ValueError("breaks must not be missing")
+        return cls.from_arrays(breaks[:-1], breaks[1:], dtype=dtype)
+
+    @classmethod
     def _from_sequence(cls, scalars, *, dtype=None, copy=False):
         if isinstance(scalars, cls) and (dtype is None or dtype == scalars.dtype):
             return scalars.copy() if copy else scalars

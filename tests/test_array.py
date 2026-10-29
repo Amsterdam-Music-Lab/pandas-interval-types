@@ -239,3 +239,26 @@ def test_min_max():
     assert groups.min().tolist() == [Interval(0, 3), Interval(0, 1)]
     with pytest.raises(TypeError):
         ser.sum()
+
+
+def test_from_breaks():
+    arr = IntervalArray.from_breaks([0, F(1, 2), 1])
+    assert arr.dtype == IntervalDType(FractionDType())
+    assert list(arr) == [Interval(0, F(1, 2)), Interval(F(1, 2), 1)]
+    from_series = IntervalArray.from_breaks(pd.Series(frac([0, F(1, 2)])))
+    assert list(from_series) == [Interval(0, F(1, 2))]
+    as_float = IntervalArray.from_breaks([0, 1, 1], dtype="span[float64]")
+    assert as_float.dtype == IntervalDType("Float64")
+    # equal breaks give an instantaneous interval
+    assert list(as_float) == [Interval(0.0, 1.0), Interval(1.0, 1.0)]
+    # fewer than two breaks give no intervals
+    assert len(IntervalArray.from_breaks([])) == 0
+    single = IntervalArray.from_breaks(frac([1]))
+    assert len(single) == 0 and single.dtype == IntervalDType(FractionDType())
+
+
+def test_from_breaks_invalid():
+    with pytest.raises(ValueError, match="missing"):
+        IntervalArray.from_breaks([0, None, 1])
+    with pytest.raises(ValueError, match="before"):
+        IntervalArray.from_breaks([0, 2, 1])

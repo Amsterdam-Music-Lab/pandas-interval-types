@@ -39,6 +39,7 @@ spans.dtype           # span[frac]
 spans[1]              # Interval(left=Fraction(1, 2), right=Fraction(1, 1))
 spans.array.duration  # FractionArray [1/2, 1/2]
 pd.Series([Interval(0, Fraction(1, 2))], dtype="span")  # infers span[frac]
+IntervalArray.from_breaks([0, Fraction(1, 2), 1])  # [0, 1/2), [1/2, 1)
 ```
 
 ## Design
