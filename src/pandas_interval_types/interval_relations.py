@@ -1,10 +1,9 @@
-from typing import Literal, overload
+import typing
+from typing import Literal, overload, Callable
 from pandas_interval_types.interval import Interval, Time
 from pandas_interval_types.array import IntervalArray
 import numpy.typing as npt
 import numpy as np
-
-# TODO: use overloads for more fine-grained types in relations
 
 IntervalLike = Interval | IntervalArray
 
@@ -17,55 +16,159 @@ Boolish = bool | npt.NDArray[np.bool]
 # ---------------
 
 
-def precedes(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def precedes(a: Interval, b: Interval) -> bool: ...
+@overload
+def precedes(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def precedes(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def precedes(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def precedes(a, b):
     return a.right < b.left
 
 
-def follows(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def follows(a: Interval, b: Interval) -> bool: ...
+@overload
+def follows(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def follows(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def follows(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def follows(a, b):
     return precedes(b, a)
 
 
-def meets(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def meets(a: Interval, b: Interval) -> bool: ...
+@overload
+def meets(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def meets(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def meets(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def meets(a, b):
     return (a.right == b.left) & (a.left < b.left)
 
 
-def is_met(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def is_met(a: Interval, b: Interval) -> bool: ...
+@overload
+def is_met(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def is_met(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def is_met(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def is_met(a, b):
     return meets(b, a)
 
 
-def overlaps(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def overlaps(a: Interval, b: Interval) -> bool: ...
+@overload
+def overlaps(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def overlaps(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def overlaps(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def overlaps(a, b):
     return (a.left < b.left) & (a.right > b.left) & (a.right < b.right)
 
 
-def is_overlapped(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def is_overlapped(a: Interval, b: Interval) -> bool: ...
+@overload
+def is_overlapped(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def is_overlapped(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def is_overlapped(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def is_overlapped(a, b):
     return overlaps(b, a)
 
 
-def starts(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def starts(a: Interval, b: Interval) -> bool: ...
+@overload
+def starts(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def starts(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def starts(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def starts(a, b):
     return (a.left == b.left) & (a.right < b.right)
 
 
-def is_started(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def is_started(a: Interval, b: Interval) -> bool: ...
+@overload
+def is_started(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def is_started(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def is_started(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def is_started(a, b):
     return starts(b, a)
 
 
-def contains_strict(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def contains_strict(a: Interval, b: Interval) -> bool: ...
+@overload
+def contains_strict(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def contains_strict(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def contains_strict(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def contains_strict(a, b):
     return (a.left < b.left) & (a.right > b.right)
 
 
-def during_strict(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def during_strict(a: Interval, b: Interval) -> bool: ...
+@overload
+def during_strict(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def during_strict(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def during_strict(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def during_strict(a, b):
     return contains_strict(b, a)
 
 
-def finishes(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def finishes(a: Interval, b: Interval) -> bool: ...
+@overload
+def finishes(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def finishes(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def finishes(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def finishes(a, b):
     return (a.left > b.left) & (a.right == b.right) & (a.left < b.right)
 
 
-def is_finished(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def is_finished(a: Interval, b: Interval) -> bool: ...
+@overload
+def is_finished(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def is_finished(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def is_finished(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def is_finished(a, b):
     return finishes(b, a)
 
 
-def equal(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def equal(a: Interval, b: Interval) -> bool: ...
+@overload
+def equal(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def equal(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def equal(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def equal(a, b):
     return (a.left == b.left) & (a.right == b.right)
 
 
@@ -73,7 +176,15 @@ def equal(a: IntervalLike, b: IntervalLike) -> Boolish:
 # ---------------
 
 
-def intersects(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def intersects(a: Interval, b: Interval) -> bool: ...
+@overload
+def intersects(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def intersects(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def intersects(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def intersects(a, b):
     a_closed = a.left == a.right
     b_closed = b.left == b.right
     a_after_b = (a.right > b.left) | (a_closed & (a.right >= b.left))
@@ -81,7 +192,15 @@ def intersects(a: IntervalLike, b: IntervalLike) -> Boolish:
     return a_after_b & b_after_a
 
 
-def contains(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def contains(a: Interval, b: Interval) -> bool: ...
+@overload
+def contains(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def contains(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def contains(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def contains(a, b):
     """constains_strict or is_started or is_finished or equal"""
     b_open = b.left != b.right
     a_closed = a.left == a.right
@@ -90,41 +209,97 @@ def contains(a: IntervalLike, b: IntervalLike) -> Boolish:
     return left_in & right_in
 
 
-def during(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def during(a: Interval, b: Interval) -> bool: ...
+@overload
+def during(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def during(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def during(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def during(a, b):
     """during_strict or starts or finishes or equal"""
     return contains(b, a)
 
 
-def contains_start(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def contains_start(a: Interval, b: Interval) -> bool: ...
+@overload
+def contains_start(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def contains_start(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def contains_start(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def contains_start(a, b):
     a_closed = a.left == a.right
     left = a.left <= b.left
     right = (a.right > b.left) | (a_closed & (a.right >= b.left))
     return left & right
 
 
-def starts_in(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def starts_in(a: Interval, b: Interval) -> bool: ...
+@overload
+def starts_in(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def starts_in(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def starts_in(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def starts_in(a, b):
     return contains_start(b, a)
 
 
-def contains_end(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def contains_end(a: Interval, b: Interval) -> bool: ...
+@overload
+def contains_end(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def contains_end(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def contains_end(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def contains_end(a, b):
     a_closed = a.left == a.right
     b_closed = b.left == b.right
-    a_open = a.left != a.right
+    # a_open = a.left != a.right
     b_open = b.left != b.right
     left = (b_closed & (a.left <= b.right)) | (a.left < b.right)
     right = ((a_closed | b_open) & (a.right >= b.right)) | (a.right > b.right)
     return left & right
 
 
-def ends_in(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def ends_in(a: Interval, b: Interval) -> bool: ...
+@overload
+def ends_in(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def ends_in(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def ends_in(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def ends_in(a, b):
     return contains_end(b, a)
 
 
-def starts_with(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def starts_with(a: Interval, b: Interval) -> bool: ...
+@overload
+def starts_with(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def starts_with(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def starts_with(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def starts_with(a, b):
     return a.left == b.left
 
 
-def ends_with(a: IntervalLike, b: IntervalLike) -> Boolish:
+@overload
+def ends_with(a: Interval, b: Interval) -> bool: ...
+@overload
+def ends_with(a: Interval, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+@overload
+def ends_with(a: IntervalArray, b: Interval) -> npt.NDArray[np.bool]: ...
+@overload
+def ends_with(a: IntervalArray, b: IntervalArray) -> npt.NDArray[np.bool]: ...
+def ends_with(a, b):
     return (a.right == b.right) & ((a.left == a.right) == (b.left == b.right))
 
 
@@ -135,30 +310,54 @@ def ends_with(a: IntervalLike, b: IntervalLike) -> Boolish:
 # ------------------
 
 
-def point_before_interval[T: Time](a: T, i: Interval[T] | IntervalArray) -> Boolish:
+@overload
+def point_before_interval[T: Time](a: T, i: Interval[T]) -> bool: ...
+@overload
+def point_before_interval(a, i: Interval | IntervalArray) -> npt.NDArray[np.bool]: ...
+def point_before_interval(a, i):
     return a < i.left
 
 
-def point_starts_interval[T: Time](a: T, i: Interval[T] | IntervalArray) -> Boolish:
+@overload
+def point_starts_interval[T: Time](a: T, i: Interval[T]) -> bool: ...
+@overload
+def point_starts_interval(a, i: Interval | IntervalArray) -> npt.NDArray[np.bool]: ...
+def point_starts_interval(a, i):
     return a == i.left
 
 
-def point_strictly_inside_interval[T: Time](
-    a: T, i: Interval[T] | IntervalArray
-) -> Boolish:
+@overload
+def point_strictly_inside_interval[T: Time](a: T, i: Interval[T]) -> bool: ...
+@overload
+def point_strictly_inside_interval(
+    a, i: Interval | IntervalArray
+) -> npt.NDArray[np.bool]: ...
+def point_strictly_inside_interval(a, i) -> Boolish:
     """Returns True if the point is strictly within the interval."""
     return (a > i.left) & (a < i.right)
 
 
-def point_ends_interval[T: Time](a: T, i: Interval[T] | IntervalArray) -> Boolish:
+@overload
+def point_ends_interval[T: Time](a: T, i: Interval[T]) -> bool: ...
+@overload
+def point_ends_interval(a, i: Interval | IntervalArray) -> npt.NDArray[np.bool]: ...
+def point_ends_interval(a, i):
     return a == i.right
 
 
-def point_after_interval[T: Time](a: T, i: Interval[T] | IntervalArray) -> Boolish:
+@overload
+def point_after_interval[T: Time](a: T, i: Interval[T]) -> bool: ...
+@overload
+def point_after_interval(a, i: Interval | IntervalArray) -> npt.NDArray[np.bool]: ...
+def point_after_interval(a, i):
     return a > i.right
 
 
-def point_in_interval[T: Time](a: T, i: Interval[T] | IntervalArray) -> Boolish:
+@overload
+def point_in_interval[T: Time](a: T, i: Interval[T]) -> bool: ...
+@overload
+def point_in_interval(a, i: Interval | IntervalArray) -> npt.NDArray[np.bool]: ...
+def point_in_interval(a, i):
     return ((a >= i.left) & (a < i.right)) | ((a == i.left) & (a == i.right))
 
 
@@ -170,7 +369,7 @@ def point_in_interval[T: Time](a: T, i: Interval[T] | IntervalArray) -> Boolish:
 def intersection(a: Interval, b: Interval) -> Interval | None: ...
 @overload
 def intersection(a: IntervalLike, b: IntervalLike) -> IntervalLike: ...
-def intersection(a: IntervalLike, b: IntervalLike) -> IntervalLike | None:
+def intersection(a, b):
     """Returns the intersection of intervals a and b."""
     left = np.maximum(a.left, b.left)
     right = np.minimum(a.right, b.right)
