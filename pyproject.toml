@@ -19,10 +19,11 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "black>=26.10.1",
-    "mypy>=2.4.0",
     "pandas-fractions",
+    "black>=26.10.1",
+    # "mypy>=2.4.0",
     "pytest>=9.1.1",
+    "ty>=0.0.95",
 ]
 
 [tool.uv.sources]

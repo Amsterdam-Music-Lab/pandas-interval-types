@@ -1,7 +1,10 @@
+from typing import Literal, overload
 from pandas_interval_types.interval import Interval, Time
 from pandas_interval_types.array import IntervalArray
 import numpy.typing as npt
 import numpy as np
+
+# TODO: use overloads for more fine-grained types in relations
 
 IntervalLike = Interval | IntervalArray
 
@@ -157,3 +160,29 @@ def point_after_interval[T: Time](a: T, i: Interval[T] | IntervalArray) -> Booli
 
 def point_in_interval[T: Time](a: T, i: Interval[T] | IntervalArray) -> Boolish:
     return ((a >= i.left) & (a < i.right)) | ((a == i.left) & (a == i.right))
+
+
+# Operations
+# ==========
+
+
+@overload
+def intersection(a: Interval, b: Interval) -> Interval | None: ...
+@overload
+def intersection(a: IntervalLike, b: IntervalLike) -> IntervalLike: ...
+def intersection(a: IntervalLike, b: IntervalLike) -> IntervalLike | None:
+    """Returns the intersection of intervals a and b."""
+    left = np.maximum(a.left, b.left)
+    right = np.minimum(a.right, b.right)
+    valid = (left < right) | (
+        (left == right) & point_in_interval(left, a) & point_in_interval(left, b)
+    )
+    if isinstance(a, Interval) and isinstance(b, Interval):
+        if valid:
+            return Interval(left, right)
+        else:
+            return None
+    else:
+        left[~valid] = None
+        right[~valid] = None
+        return IntervalArray.from_arrays(left, right)

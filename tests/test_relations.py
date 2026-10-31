@@ -1,9 +1,10 @@
-import pytest
 from fractions import Fraction as F
-from pandas_interval_types import Interval, IntervalArray
-import pandas_interval_types.interval_relations as ir
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+import pandas_interval_types.interval_relations as ir
+import pytest
+from pandas_interval_types import Interval, IntervalArray
 
 TIME_TYPES = [
     pytest.param(int, id="int"),
@@ -337,3 +338,91 @@ def test_point_empty_relations(t):
     assert not ir.point_in_interval(t(0), i(1, 1))
     assert ir.point_in_interval(t(1), i(1, 1))
     assert not ir.point_in_interval(t(2), i(1, 1))
+
+
+# Test Operations
+# ===============
+
+
+def intersections_a_b(t):
+    return IntervalArray._from_sequence(
+        [
+            None,
+            None,
+            None,
+            None,
+            Interval(t(2), t(3)),
+            Interval(t(4), t(5)),
+            Interval(t(2), t(3)),
+            Interval(t(2), t(5)),
+            Interval(t(2), t(5)),
+            Interval(t(3), t(4)),
+            Interval(t(4), t(5)),
+            Interval(t(2), t(5)),
+            Interval(t(2), t(5)),
+        ]
+    )
+
+
+@pytest.mark.parametrize("t", TIME_TYPES)
+def test_intersection(t):
+    a_ivs = intervals_a(t)
+    b = interval_b(t)
+    b_ivs = intervals_b(t)
+    inter_a_b = intersections_a_b(t)
+
+    for a, inter in zip(a_ivs, inter_a_b):
+        if inter is np.nan:
+            inter = None
+        assert ir.intersection(a, b) == inter
+        assert ir.intersection(b, a) == inter
+
+    assert ir.intersection(a_ivs, b).equals(inter_a_b)
+    assert ir.intersection(b, a_ivs).equals(inter_a_b)
+
+    assert ir.intersection(a_ivs, b_ivs).equals(inter_a_b)
+    assert ir.intersection(b_ivs, a_ivs).equals(inter_a_b)
+
+
+def empty_intersections(t):
+    def i(left, right):
+        return Interval(t(left), t(right))
+
+    # empty intersection is allowed iff equal to
+    cases = [
+        (i(0, 0), i(1, 3), None),
+        (i(1, 1), i(1, 3), i(1, 1)),
+        (i(2, 2), i(1, 3), i(2, 2)),
+        (i(3, 3), i(1, 3), None),
+        (i(4, 4), i(1, 3), None),
+        (i(1, 1), i(2, 2), None),
+        (i(2, 2), i(2, 2), i(2, 2)),
+    ]
+    a = IntervalArray._from_sequence([x[0] for x in cases])
+    b = IntervalArray._from_sequence([x[1] for x in cases])
+    expected = IntervalArray._from_sequence([x[2] for x in cases])
+    return a, b, expected
+
+
+@pytest.mark.parametrize("t", TIME_TYPES)
+def test_intersection_empty(t):
+    a_ivs, b_ivs, expected = empty_intersections(t)
+
+    # scalar vs scalar
+    for a, b, e in zip(a_ivs, b_ivs, expected):
+        if e is np.nan:
+            e = None
+        assert ir.intersection(a, b) == e
+        assert ir.intersection(b, a) == e
+
+    # array vs array
+    assert ir.intersection(a_ivs, b_ivs).equals(expected)
+    assert ir.intersection(b_ivs, a_ivs).equals(expected)
+
+    for i in range(len(a_ivs)):
+        # scalar vs array
+        assert ir.intersection(a_ivs[i], b_ivs[[i]]).equals(expected[[i]])
+        assert ir.intersection(b_ivs[i], a_ivs[[i]]).equals(expected[[i]])
+        # array vs scalar
+        assert ir.intersection(a_ivs[[i]], b_ivs[i]).equals(expected[[i]])
+        assert ir.intersection(b_ivs[[i]], a_ivs[i]).equals(expected[[i]])
